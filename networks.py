@@ -5,6 +5,8 @@ class InvalidOctetsNumber(Exception):
 	pass
 class InvalidOctetValue(Exception):
 	pass
+class NetmaskDiscontinuous(Exception):
+	pass
 
 	
 def ToList(addressDotDec):
@@ -28,7 +30,7 @@ def ToDotDec(list):
 			str2+="."
 	return str2
 	
-def AddressToBin(address):
+def IPv4AddressToBin(address):
     if ValidateIPv4Address(address):
         s = ""
         l = ToList(address)
@@ -74,8 +76,61 @@ def IPv4AddressToDec(IPv4Address):
 			result += listOfOctets[i]
 		return result
 
-
+# Walidacja maski podsieci
 def ValidateIPv4Netmask(IPv4Netmask):
 	if ValidateIPv4Address(IPv4Netmask):
-		#walidacja ciągłości maski podsieci
-		pass
+		#walidacja ciągłości maski podsieci. 
+		#Maska podsieci składa się z sekwencji binarnych jedynek i następujących po nich zer.
+		#jeśli w masce wystąpi sekwencja 01, maska jest nieciągła
+		netmaskBin = IPv4AddressToBin(IPv4Netmask)
+		
+		try:
+			#znajdź sekwencję 01 w masce podsieci
+			#jeśli sekwencja 01 zostanie znaleziona, rzuć wyjątek NetmaskDiscontinuous
+			#jeśli sekwencja 01 nie zostanie znaleziona, metoda index() rzuca wyjątek ValueError
+			#przechwytujemy ten wyjątek i zwracamy True, co oznacza, że maska jest prawidłowa
+			index = netmaskBin.index("01")
+			
+			if index >= 0:
+				raise NetmaskDiscontinuous("Brak ciągłości maski na bicie", index + 1)
+		except ValueError as ve:
+			if ve.args[0] == "substring not found":
+				return True
+		#return True
+#funkcja przekształca adres IPv4 w postaci dziesiętnej na listę oktetów
+def IPv4AddressDecToList(ipv4AddressDec):
+	octets = []
+	for i in range(4):
+		#zapisywanie ostatnich 8 bitów do zmiennej octet i dodanie jej do listy
+		octet = ipv4AddressDec & 255
+		octets.insert(0,octet)
+		#przesuwanie liczby ipv4AddressDec o 8 bitów w prawo
+		ipv4AddressDec >>= 8
+	return octets
+
+# Obliczanie adresu sieci
+def CalculateNetwork(IPv4Address, IPv4Netmask):
+	network = {}
+	ValidateIPv4Address(IPv4Address)
+	ValidateIPv4Netmask(IPv4Netmask)
+	addressDec = IPv4AddressToDec(IPv4Address)
+	netmaskDec = IPv4AddressToDec(IPv4Netmask)
+
+	# obliczanie adresu sieci jako iloczynu logicznego adresu IP i maski podsieci
+	networkAddressDec = addressDec & netmaskDec
+	broadcastAddressDec = networkAddressDec | (~netmaskDec)
+	firstHostAddressDec = networkAddressDec + 1
+	lastHostAddressDec = broadcastAddressDec - 1
+
+	# budowanie słownika
+	network['networkAddress'] = IPv4AddressDecToList(networkAddressDec)
+	network['netmask'] = IPv4AddressDecToList(netmaskDec)
+	network['firstAddress'] = IPv4AddressDecToList(firstHostAddressDec)
+	network['lastAddress'] = IPv4AddressDecToList(lastHostAddressDec)
+	network['broadcastAddress'] = IPv4AddressDecToList(broadcastAddressDec)
+
+	return network
+
+
+# Obliczanie adresu rozgłoszeniowego
+

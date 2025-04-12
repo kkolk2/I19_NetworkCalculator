@@ -3,14 +3,14 @@ import convertions as conv
 import networks as nets
 import functions as f
 
-v = input('Podaj adres IP: ')
-try:
-    print (nets.ToList(v))
-    print (nets.ToDotDec(nets.ToList(v)))
-    print (nets.IPv4AddressToDec(v))
-    print (conv.DecToAny(nets.IPv4AddressToDec(v),2,32))
+
+address = input('Podaj adres IPv4: ')
+netmask = input ('Podaj maskę podsieci: ')
+try:    
+    nets.ValidateIPv4Address(address)
+    nets.ValidateIPv4Netmask(netmask)
     
-    addr_bin = nets.AddressToBin(v)	
+   
 except nets.InvalidOctetsNumber as invOctNum:
     #wydzielenie parametrów przekazanych wraz z wyjątkami
     msg, num = invOctNum.args
@@ -21,6 +21,8 @@ except nets.InvalidOctetValue as invOctVal:
     msg, nr, val = invOctVal.args
     #TODO: poprawić komunikat
     print("Błąd! ", msg +" nr "+ str(nr) + ":", val)
+except nets.NetmaskDiscontinuous as netmaskDiscontinuous:
+    print("Błąd!", netmaskDiscontinuous.args[0], netmaskDiscontinuous.args[1])
 #gdy nie zostanie zgłoszony wyjątek
 else:
-    print()
+    print(nets.CalculateNetwork(address,netmask))
