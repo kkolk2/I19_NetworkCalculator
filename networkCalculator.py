@@ -25,4 +25,4 @@ except nets.NetmaskDiscontinuous as netmaskDiscontinuous:
     print("Błąd!", netmaskDiscontinuous.args[0], netmaskDiscontinuous.args[1])
 #gdy nie zostanie zgłoszony wyjątek
 else:
-    print(nets.CalculateNetwork(address,netmask))
+    print(nets.NetworkInfo(address,netmask))
