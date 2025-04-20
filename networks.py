@@ -195,7 +195,7 @@ def IPv4Subnets(IPv4Network, IPv4Netmask, numberOfSubnets):
 	ValidateIPv4Netmask(IPv4Netmask)
 	ipv4NetmaskDec = IPv4AddressToDec(IPv4Netmask)
 
-	prefix = GetPrefix(IPv4Netmask)
+	prefix = GetIPv4NetmaskPrefixLength(IPv4Netmask)
 	targetNetmask = ipv4NetmaskDec
 
 	#obliczanie maski docelowej
