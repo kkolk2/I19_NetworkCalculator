@@ -207,4 +207,12 @@ def IPv4Subnets(IPv4Network, IPv4Netmask, numberOfSubnets):
 
 	#TODO: dokończyć
 
+'''
+TODO: 
+	- rozdział adresu w formacie x.x.x.x/y na adres IP i maskę podsieci (w postaci słownika)
+	- podział na równe podsieci 
+	- przetestować wszystko
+
+'''
+#
 
