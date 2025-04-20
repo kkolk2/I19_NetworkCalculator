@@ -1,5 +1,5 @@
 
-import convertions as conv
+import conversions as conv
 import networks as nets
 import functions as f
 
