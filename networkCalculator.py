@@ -6,10 +6,18 @@ import functions as f
 
 address = input('Podaj adres IPv4: ')
 netmask = input ('Podaj maskę podsieci: ')
+
+#addressPrefix = "192.168.10.10 / 18"
+subnets = []
 try:    
-    nets.ValidateIPv4Address(address)
-    nets.ValidateIPv4Netmask(netmask)
+    #nets.ValidateIPv4Address(address)
+    #nets.ValidateIPv4Netmask(netmask)
+
+    #d = nets.ParseIPv4Address(addressPrefix)
+    subnetsCount = int(input ('Podaj ilość podsieci: '))
     
+    subnets = nets.IPv4Subnetting(address,netmask,subnetsCount)
+
    
 except nets.InvalidOctetsNumber as invOctNum:
     #wydzielenie parametrów przekazanych wraz z wyjątkami
@@ -26,3 +34,14 @@ except nets.NetmaskDiscontinuous as netmaskDiscontinuous:
 #gdy nie zostanie zgłoszony wyjątek
 else:
     print(nets.NetworkInfo(address,netmask))
+    for i in range(len(subnets)):
+        print(f"Network {i + 1}:")
+        for name, param in subnets[i].items():
+            print(f"\t{name}: {param}")
+        print("-------------------------")
+finally:
+    #print (subnets)
+    pass
+
+    
+        
