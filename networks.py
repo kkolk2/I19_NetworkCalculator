@@ -144,7 +144,7 @@ def ValidateIPv4Netmask(IPv4Netmask):
 		#return True
 
 # Obliczanie długości prefixu (liczba binarnych 1 w masce)
-def GetIPv4NetmaskPrefixLength(IPv4Netmask):
+def GetIPv4NetmaskPrefixLength(IPv4Netmask: str|list|int) -> int:
 	if ValidateIPv4Netmask(IPv4Netmask):
 		netmaskDec = IPv4AddressToDec(IPv4Netmask)
 		
@@ -157,7 +157,7 @@ def GetIPv4NetmaskPrefixLength(IPv4Netmask):
 			netmaskDec >>= 1
 		return prefixLength
 	
-def GetIPv4NetmaskFromPrefixLength(prefixLength):
+def GetIPv4NetmaskFromPrefixLength(prefixLength: int) -> int:
 	if prefixLength >0 and prefixLength <=32:
 		netmaskBin = prefixLength*"1" + (32 - prefixLength)*"0"
 		return conv.AnyToDec(netmaskBin, 2)
@@ -212,7 +212,7 @@ def ParseIPv4Address(IPv4AddressAndPrefix: str) -> dict:
 
 
 # Podział sieci na podsieci
-def IPv4Subnetting(IPv4Network, IPv4Netmask, numberOfSubnets: int):
+def IPv4Subnetting(IPv4Network, IPv4Netmask, numberOfSubnets: int) -> list:
 		
 	ValidateIPv4Address(IPv4Network)
 	ipv4NetworkDec = IPv4AddressToDec(IPv4Network)
@@ -245,7 +245,7 @@ def IPv4Subnetting(IPv4Network, IPv4Netmask, numberOfSubnets: int):
 	
 	return subnets
 
-	#TODO: dokończyć
+	
 
 '''
 TODO: 
