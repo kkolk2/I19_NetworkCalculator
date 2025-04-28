@@ -10,6 +10,8 @@ netmask = input ('Podaj maskę podsieci: ')
 #addressPrefix = "192.168.10.10 / 18"
 subnets = []
 try:    
+    
+
     #nets.ValidateIPv4Address(address)
     #nets.ValidateIPv4Netmask(netmask)
 

@@ -245,8 +245,27 @@ def IPv4Subnetting(IPv4Network, IPv4Netmask, numberOfSubnets: int) -> list:
 	
 	return subnets
 
-	
 
+# funkcja sortuje podany na wejście słownik wg liczby hostów
+def SubnetsSort(networks: dict, method: int, reverse = False) -> list:
+	templist = list(networks.items())
+	print(templist)
+	#sortowanie bąbelkowe
+	if method == 0:		
+		for maxElement in range(len(templist)-1,1,-1):
+			for index in range(maxElement):
+				#kierunek sortowania
+				condition = False
+				if reverse == True:
+					condition = templist[index][1]['hostsNumber'] < templist[index + 1][1]['hostsNumber']
+				else:
+					condition = templist[index][1]['hostsNumber'] > templist[index + 1][1]['hostsNumber']
+				if condition == True:
+					temp = templist[index]
+					templist[index] = templist[index + 1]
+					templist[index + 1] = temp
+	
+	return templist
 '''
 TODO: 
 	- rozdział adresu w formacie x.x.x.x/y na adres IP i maskę podsieci (w postaci słownika)
@@ -256,3 +275,16 @@ TODO:
 '''
 #
 
+networks = {
+    "LAN1": {		
+		"hostsNumber": 35
+		},
+    "LAN2": {
+		"hostsNumber": 12
+		},
+    "LAN3": {
+		"hostsNumber": 20
+		},
+}
+
+print (SubnetsSort(networks,0,True))
