@@ -20,7 +20,7 @@ def Search(inputText: str, substring: str) -> int:
 	len_it = len(inputText)
 	len_s = len(substring)
 	if len_it >= len_s:
-		for index in range(len_it - len_s):
+		for index in range(len_it - len_s + 1):
 			if inputText[index] == substring[0]:
 				correct = True
 				checkingIndex = index + 1
