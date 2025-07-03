@@ -1,4 +1,7 @@
 import conversions as conv
+import functions as func
+import msvcrt
+import menu
 
 #klasy reprezentujące błedne wartości w adresie IPv4
 class InvalidOctetsNumber(Exception):
@@ -49,7 +52,7 @@ def MACToBin(MACaddress):
 	return bin
 
 #funkcja walidująca podany na wejście adres IPv4
-def ValidateIPv4Address(IPv4Address):
+def ValidateIPv4Address(IPv4Address: str|list|int) -> bool:
 	#jeżeli podano adres IPv4 w postaci kropkowo-dziesiętnej
 	octets = []
 	if type(IPv4Address) == str: 
@@ -76,7 +79,7 @@ def ValidateIPv4Address(IPv4Address):
 	finally:
 		pass
 #zamienia na 32-bitową liczbę dziesiętną 
-def IPv4AddressToDec(IPv4Address):
+def IPv4AddressToDec(IPv4Address: str|list|int) -> int: 
 	if ValidateIPv4Address(IPv4Address):
 		if type(IPv4Address) == str: 
 			listOfOctets = ToList(IPv4Address)
@@ -150,7 +153,7 @@ def GetIPv4NetmaskPrefixLength(IPv4Netmask: str|list|int) -> int:
 		
 		bit=0
 		prefixLength = 32		
-		while bit == 0:
+		while bit == 0 and prefixLength > 0:
 			bit = netmaskDec & 1
 			if bit == 0:
 				prefixLength -= 1
@@ -174,8 +177,10 @@ def NetworkInfo(IPv4Address: str|list|int, IPv4Netmask: str|list|int) -> dict:
 	# obliczanie adresu sieci jako iloczynu logicznego adresu IP i maski podsieci
 	networkAddressDec = addressDec & netmaskDec
 	
+	#obliczanie adresu rozgłoszeniowego
 	broadcastAddressDec = int(networkAddressDec | (~netmaskDec + (1 << 32)))
 	
+	#obliczanie adresów użytecznych
 	firstHostAddressDec = networkAddressDec + 1
 	lastHostAddressDec = broadcastAddressDec - 1
 	
@@ -196,65 +201,68 @@ def NetworkInfo(IPv4Address: str|list|int, IPv4Netmask: str|list|int) -> dict:
 
 	return network
 
-# funkcja parsuje adres IPv4 w formacie address/prefix i zwraca w postaci słownika
-def ParseIPv4Address(IPv4AddressAndPrefix: str) -> dict:
-	#rozdzielenie części adresu i prefixa maski podsieci
-	partsList = IPv4AddressAndPrefix.replace(" ","").split("/")
+#funkcja dzieli sieć na równe podsieci
+def Subnetting(IPv4Address: str|list|int, IPv4Netmask: str|list|int, names: list) -> dict:
 	
-	paramsDict = {'Address': IPv4AddressToList(partsList[0])}	
-	if len(partsList) >= 2:
-		paramsDict['PrefixLength'] = int(partsList[1])
+	addressDec = IPv4AddressToDec(IPv4Address)
+	netmaskDec = IPv4AddressToDec(IPv4Netmask)
+	networksNumber = len(names)
+	
+	#upewniamy się, że podany adres jest adresem sieci
+	addressDec = addressDec & netmaskDec
+	
+	#obliczamy liczbę bitów, o którą należy przesunąć maskę w prawo
+	# 2^n >= N, gdzie n - liczba bitów o którą należy przesunąć maskę, N - liczba sieci do podziału
+	n = 0	
+	while 2 ** n < networksNumber:
+		n += 1
+	
+	#obliczanie nowej maski podsieci
+	subnetsNetmask = netmaskDec
+	
+	for i in range(n):
+		subnetsNetmask >>= 1
+		subnetsNetmask += (1 << 31)
+	#Obliczanie informacji dla poszczególnych podsieci
+	subnetsDict = {}
+	address = addressDec
+	for i in range(networksNumber):
+		subnetsDictTemp = NetworkInfo( address, subnetsNetmask)
+		subnetsDict[names[i]] = subnetsDictTemp
+		address = IPv4AddressToDec(subnetsDictTemp['broadcastAddress']) + 1
 		
-		paramsDict['Netmask'] = ToList(GetIPv4AddressDotDec(GetIPv4NetmaskFromPrefixLength(int(partsList[1]))))
+	return subnetsDict
+	
+
+def NestedSubnetting (IPv4Address: str|list|int, IPv4Netmask: str|list|int) -> dict:
+	#addressDotDec = GetIPv4AddressDotDec(IPv4AddressToDec(IPv4Address))
+	names = ["SUBNET1", "SUBNET2"]
+	result = {}
+	
+	
+	if GetIPv4NetmaskPrefixLength(IPv4Netmask) <= 29:
+		subnets = Subnetting(IPv4Address, IPv4Netmask, names)
+		print (subnets)
+		#for k, v in subnets.items():
+			
+			
+			#TODO: dokończyć
 		
-	return 	paramsDict
-
-
-
-# Podział sieci na podsieci
-def IPv4Subnetting(IPv4Network, IPv4Netmask, numberOfSubnets: int) -> list:
-		
-	ValidateIPv4Address(IPv4Network)
-	ipv4NetworkDec = IPv4AddressToDec(IPv4Network)
-
-	ValidateIPv4Netmask(IPv4Netmask)
-	ipv4NetmaskDec = IPv4AddressToDec(IPv4Netmask)
-
-	#obliczanie adresu sieci, na wypadek, gdyby użytkownik podał adres hosta
-	ipv4NetworkDec = ipv4NetworkDec & ipv4NetmaskDec
 	
-	targetNetmask = ipv4NetmaskDec
-
-	#obliczanie maski docelowej
-	offset = 0
-	while (2 ** offset) < numberOfSubnets:
-		targetNetmask >>=1
-		targetNetmask += (1 << 31)
-		offset += 1
-
-	#obliczanie adresów sieciowych
 	
-	subnets = []
-	#obliczenie liczby bitów w części hosta
-	hostsBitsNumber = 32 - GetIPv4NetmaskPrefixLength(targetNetmask)
-	for i in range(numberOfSubnets):
-		#dodanie informacji o podsieci do listy
-		subnets.append(NetworkInfo(ipv4NetworkDec, targetNetmask))
-		#obliczenie adresu następnej podsieci 
-		ipv4NetworkDec += (1 << hostsBitsNumber)
 	
-	return subnets
-
+	return result
+	
 
 # funkcja sortuje podany na wejście słownik wg liczby hostów
 def SubnetsSort(networks: dict, method: int, reverse = False) -> list:
 	templist = list(networks.items())
-	print(templist)
-	#sortowanie bąbelkowe
-	if method == 0:		
-		for maxElement in range(len(templist)-1,1,-1):
+#print(templist)
+#sortowanie bąbelkowe
+	if method == 0:  
+		for maxElement in range(len(templist)- 1, 1,-1):
 			for index in range(maxElement):
-				#kierunek sortowania
+			#kierunek sortowania
 				condition = False
 				if reverse == True:
 					condition = templist[index][1]['hostsNumber'] < templist[index + 1][1]['hostsNumber']
@@ -264,27 +272,58 @@ def SubnetsSort(networks: dict, method: int, reverse = False) -> list:
 					temp = templist[index]
 					templist[index] = templist[index + 1]
 					templist[index + 1] = temp
-	
+	 
 	return templist
-'''
-TODO: 
-	- rozdział adresu w formacie x.x.x.x/y na adres IP i maskę podsieci (w postaci słownika)
-	- podział na równe podsieci 
-	- przetestować wszystko
 
-'''
-#
+def NetworkInfoMenuOption():
+	IPv4Address = input('Podaj adres IPv4: ')
+	IPv4Netmask = input('Podaj maskę podsieci: ')
+	res = NetworkInfo(IPv4Address, IPv4Netmask)
+	print ("Oto szczególowe informacje na temat tej podsieci:")
+	print (res)
 
-networks = {
-    "LAN1": {		
+def SubnettingMenuOption():
+	IPv4Address = input('Podaj adres sieci IPv4: ')
+	IPv4Netmask = input('Podaj maskę podsieci: ')
+	networksNumber = int(input('Na ile sieci dzielimy? '))
+	names = []
+	for i in range(networksNumber):
+		name = input('Podaj nazwę sieci nr ' + str(i) + ': ')
+		names.append(name)
+	res = Subnetting(IPv4Address, IPv4Netmask, names)
+	print ("Sieci po podziale wyglądają następująco:")
+	print (res)
+
+def IPv4NetworksMenu():
+	menuItems = ['Informacje o sieci na podstawie IP i maski',
+	'Podział sieci na równe podsieci', 'Podział sieci z dostosowaniem maski podsieci (VLSM)']
+	result = menu.Menu("Działania na adresach IPv4", menuItems, True)
+
+	match result[0]:
+		case 0:
+			NetworkInfoMenuOption()
+			msvcrt.getch()
+		case 1:			
+			SubnettingMenuOption()
+			msvcrt.getch()
+		case 2:
+			print ("W budowie...")
+			msvcrt.getch()
+	
+
+	
+ 
+if __name__ == '__main__':
+	networks = {
+		"LAN1": {  
 		"hostsNumber": 35
 		},
-    "LAN2": {
+		"LAN2": {
 		"hostsNumber": 12
 		},
-    "LAN3": {
+		"LAN3": {
 		"hostsNumber": 20
 		},
-}
+	}
 
-print (SubnetsSort(networks,0,True))
+	NestedSubnetting('192.168.1.0', '255.255.255.0')

@@ -12,29 +12,38 @@ def InputNumber(message):
 	
 #print(InputNumber("Podaj liczbe: "))
 
-#funkcja wyszukuje ciąg znaków w tekście metodą sekwencyjną
-#wartość zwracana: int - index znaku, od którego zaczyna się pierwsze wystąpienie szukanej wartości
-#gdy wartość nie zostanie znaleziona, rzuca wyjątek ValueError z komunikatem "substring not found"
+#funkcja wyszukuje podłańcuch w łańcuchu
+#wartość zwracana: int - index znaku, od którego zaczyna sie poszukiwana sekwencja
+#jeśli nie zostanie znaleziona - wyjątek ValueError("substring not found")
 def Search(inputText: str, substring: str) -> int:
-
+	
+	#rozmiary łańcuchów
 	len_it = len(inputText)
 	len_s = len(substring)
+	
 	if len_it >= len_s:
 		for index in range(len_it - len_s + 1):
 			if inputText[index] == substring[0]:
 				correct = True
 				checkingIndex = index + 1
-				i = 0
-				while correct == True and (checkingIndex - index) < len_s:
+				while correct and (checkingIndex - index) < len_s:
 					if inputText[checkingIndex] == substring[checkingIndex - index]:
 						checkingIndex += 1
 					else:
 						correct = False
-				if correct == True: 
+				if correct:
 					return index
 		raise ValueError("substring not found")
 	else:
-		raise ValueError("searching substring is longer than input text")
-
-#print(Search("Ala ma kota", ""))
-
+		raise ValueError("substring is longer than input text")
+		
+def Power(a, b):
+	result = 1
+	while b > 0:
+		if b%2:
+			result *= a
+		a *= a
+		b //= 2
+	return result
+	
+	
