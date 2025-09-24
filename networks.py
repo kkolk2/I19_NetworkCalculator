@@ -3,6 +3,10 @@ import functions as func
 import msvcrt
 import menu
 
+# -----------------------------------------------------------------------------
+#           Zmienne globalne
+# -----------------------------------------------------------------------------
+
 #klasy reprezentujące błedne wartości w adresie IPv4
 class InvalidOctetsNumber(Exception):
 	pass
@@ -11,7 +15,10 @@ class InvalidOctetValue(Exception):
 class NetmaskDiscontinuous(Exception):
 	pass
 
-	
+# -----------------------------------------------------------------------------
+#           Funkcje obsługi sieci
+# -----------------------------------------------------------------------------
+
 def ToList(IPv4AddressDotDec):
     list = IPv4AddressDotDec.split(".")
     list2 = []
@@ -275,6 +282,26 @@ def SubnetsSort(networks: dict, method: int, reverse = False) -> list:
 	 
 	return templist
 
+# -----------------------------------------------------------------------------
+#           Obsługa menu IPv4Networks
+# -----------------------------------------------------------------------------
+
+def IPv4NetworksMenu():
+	menuItems = ['Informacje o sieci na podstawie IP i maski',
+	'Podział sieci na równe podsieci', 'Podział sieci z dostosowaniem maski podsieci (VLSM)']
+	result = menu.Menu("Działania na adresach IPv4", menuItems, True)
+
+	match result[0]:
+		case 0:
+			NetworkInfoMenuOption()
+			msvcrt.getch()
+		case 1:			
+			SubnettingMenuOption()
+			msvcrt.getch()
+		case 2:
+			print ("W budowie...")
+			msvcrt.getch()
+
 def NetworkInfoMenuOption():
 	IPv4Address = input('Podaj adres IPv4: ')
 	IPv4Netmask = input('Podaj maskę podsieci: ')
@@ -294,21 +321,7 @@ def SubnettingMenuOption():
 	print ("Sieci po podziale wyglądają następująco:")
 	print (res)
 
-def IPv4NetworksMenu():
-	menuItems = ['Informacje o sieci na podstawie IP i maski',
-	'Podział sieci na równe podsieci', 'Podział sieci z dostosowaniem maski podsieci (VLSM)']
-	result = menu.Menu("Działania na adresach IPv4", menuItems, True)
 
-	match result[0]:
-		case 0:
-			NetworkInfoMenuOption()
-			msvcrt.getch()
-		case 1:			
-			SubnettingMenuOption()
-			msvcrt.getch()
-		case 2:
-			print ("W budowie...")
-			msvcrt.getch()
 	
 
 	
