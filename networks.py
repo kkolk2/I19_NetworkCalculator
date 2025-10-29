@@ -7,6 +7,8 @@ import menu
 #           Zmienne globalne
 # -----------------------------------------------------------------------------
 
+subnetsResult = None
+
 #klasy reprezentujące błedne wartości w adresie IPv4
 class InvalidOctetsNumber(Exception):
 	pass
@@ -288,7 +290,7 @@ def SubnetsSort(networks: dict, method: int, reverse = False) -> list:
 
 def IPv4NetworksMenu():
 	menuItems = ['Informacje o sieci na podstawie IP i maski',
-	'Podział sieci na równe podsieci', 'Podział sieci z dostosowaniem maski podsieci (VLSM)']
+	'Podział sieci na równe podsieci', 'Podział sieci z dostosowaniem maski podsieci (VLSM)','Zapisz do CSV']
 	result = menu.Menu("Działania na adresach IPv4", menuItems, True)
 
 	match result[0]:
@@ -301,6 +303,10 @@ def IPv4NetworksMenu():
 		case 2:
 			print ("W budowie...")
 			msvcrt.getch()
+		case 3:
+			#print ("W budowie...")
+			SaveASCSVMenuOption()
+			msvcrt.getch()
 
 def NetworkInfoMenuOption():
 	IPv4Address = input('Podaj adres IPv4: ')
@@ -310,6 +316,7 @@ def NetworkInfoMenuOption():
 	print (res)
 
 def SubnettingMenuOption():
+	
 	IPv4Address = input('Podaj adres sieci IPv4: ')
 	IPv4Netmask = input('Podaj maskę podsieci: ')
 	networksNumber = int(input('Na ile sieci dzielimy? '))
@@ -317,11 +324,20 @@ def SubnettingMenuOption():
 	for i in range(networksNumber):
 		name = input('Podaj nazwę sieci nr ' + str(i) + ': ')
 		names.append(name)
-	res = Subnetting(IPv4Address, IPv4Netmask, names)
+	global subnetsResult
+	subnetsResult = Subnetting(IPv4Address, IPv4Netmask, names)
 	print ("Sieci po podziale wyglądają następująco:")
-	print (res)
+	print (subnetsResult)
 
-
+def SaveASCSVMenuOption():
+	if subnetsResult != None:
+		filename = input("Podaj nazwę pliku:")
+		with open(filename,'w') as csv_file:
+			for network in subnetsResult.values():
+				#TODO: poprawić - adres i maska są listami
+				csv_file.write(network['networkAddress'] + ',' + network['netmask'])
+	else: print("Nie dokonano podziału")
+	
 	
 
 	
