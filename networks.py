@@ -160,15 +160,40 @@ class IPv4Netmask(IPv4Address):
 			self.address = conv.AnyToDec(netmaskBin, 2)
 		else:
 			raise ValueError("Nieprawidłowa długość prefixu maski podsieci")
+	
+	#Przesuwanie maski podsieci
+	def Move(self, bits: int):
+		if 0 <= self.GetPrefixLength() + bits <= 32:
+			for i in range(abs(bits)):
+								
+				if bits > 0: 
+					self.address >>= 1
+					self.address += (1 << 31)
+				else:
+					self.address <<= 1
+					self.address -= (1 << 31)		
+			 
+			
 		
 class IPv4Network():
 	
-	def __init__(self, address, netmask):
-		self.address = IPv4Address(address)		
-		self.netmask = IPv4Netmask(netmask)
+	def __init__(self, address, netmask = None):
+		if netmask != None:
+			if isinstance(address, IPv4Address) and isinstance(netmask, IPv4Netmask):
+				self.address = address
+				self.netmask = netmask
+			else:
+				self.address = IPv4Address(address)		
+				self.netmask = IPv4Netmask(netmask)
+			
+		else:
+			#ta część wywoływana jest jeśli zostanie podany adres sieci w postaci "adres_sieci/długość_prefixu"
+			tmpNetwork = self.ParseIPv4Address(address)
+			self.address = IPv4Address(tmpNetwork['address'])
+			self.netmask = IPv4Netmask(tmpNetwork['netmask'])
 		#obliczenie adresu sieci, na wypadek, gdyby podano adres hosta
 		self.address.address &= self.netmask.address
-		
+	
 	def __str__(self):
 		return f"{self.address}/{self.netmask.GetPrefixLength()}"
 	# Funkcja zwraca informacje na temat adresacji IPv4 sieci, do której należy podany adres i maska podsieci
@@ -197,61 +222,92 @@ class IPv4Network():
 
 		return network
 
+	# funkcja parsuje adres IPv4 w formacie address/prefix i zwraca w postaci słownika
+	def ParseIPv4Address(self, IPv4AddressAndPrefix: str) -> dict:
+		#rozdzielenie części adresu i prefixa maski podsieci
+		partsList = IPv4AddressAndPrefix.replace(" ","").split("/")
+		#tworzymy zmienną tymczasową tmpAddr jako IPv4Address i przypisujemy jej podany adres IPv4 
+		#dzięki temu będziemy mogli korzystać z metod klasy IPv4Address
+		tmpAddr = IPv4Address(partsList[0])
+		#tworzymy wynikowy słownik i od razu dodajmy do niego adres IPv4 w postaci listy pod kluczem 'Address'
+		paramsDict = {'address': tmpAddr.GetList()}
+
+		if len(partsList) >= 2:
+			#dodajemy do słownika długość prefixu pod kluczem 'PrefixLength'
+			paramsDict['prefixLength'] = int(partsList[1])
+			#dodajemy maskę podsieci w postaci kropkowo-dziesiętnej
+			#w tym celu tworzymy zmienną tmpNetmask typu IPv4Netmask
+			tmpNetmask = IPv4Netmask('0.0.0.0')
+			tmpNetmask.SetIPv4NetmaskFromPrefixLength(paramsDict['prefixLength'])
+			paramsDict['netmask'] = tmpNetmask.GetList()
+			
+		return 	paramsDict
+
+	# Podział sieci na podsieci
+	def Divide(self, numberOfSubnetsOrNames: int | str) -> list:
+		#pobieramy adres i maskę w postaci dziesiętnej		
+		addressDec = self.address.GetDec()
+		netmaskDec = self.netmask.GetDec()
+		
+		#sprawdzamy, czy użytkownik podał nazwy podsieci, czy tylko ich ilość
+		if isinstance(numberOfSubnetsOrNames, list):
+			networksNumber = len(numberOfSubnetsOrNames)
+			names = numberOfSubnetsOrNames
+		elif isinstance(numberOfSubnetsOrNames, int):
+			#sprawdzamy, czy można podzielić na tyle podsieci
+			if 2 <= numberOfSubnetsOrNames < 2 ** (30 - self.netmask.GetPrefixLength()):
+				networksNumber = numberOfSubnetsOrNames
+				names = []
+				for i in range(networksNumber):
+					names.append('Subnet_' + str(i + 1))
+			else:
+				raise ValueError("Nieprawidłowa liczba sieci do podziału")
+		else:
+			raise TypeError("Nieobsługiwany typ danych wejściowych")
+		
+		#upewniamy się, że podany adres jest adresem sieci
+		#addressDec = addressDec & netmaskDec
+		addressTmp = IPv4Address(self.address.GetDec() & self.netmask.GetDec())
+
+		
+		#obliczamy liczbę bitów, o którą należy przesunąć maskę w prawo
+		# 2^n >= N, gdzie n - liczba bitów o którą należy przesunąć maskę, N - liczba sieci do podziału
+		n = 0	
+		while 2 ** n < networksNumber:
+			n += 1
+		
+		#obliczanie nowej maski podsieci
+		#subnetsNetmask = netmaskDec
+		subnetsNetmask = self.netmask		
+		#przesunięcie maski o n bitów
+		subnetsNetmask.Move(n)
+
+		#Obliczanie informacji dla poszczególnych podsieci
+		subnetsDict = {}
+		address = addressDec
+		for i in range(networksNumber):
+			
+			subnetTemp = IPv4Network(addressTmp, subnetsNetmask)			
+			subnetsDict[names[i]] = subnetTemp.GetNetworkInfo()
+			addressTmp = IPv4Address(addressTmp.GetDec() + 2**(32 - subnetsNetmask.GetPrefixLength()))
+			#address = IPv4AddressToDec(subnetsDictTemp['broadcastAddress']) + 1
+			
+		return subnetsDict
+		
+		
+
+
 if __name__ == '__main__':
-	net = IPv4Network('192.168.15.10','255.255.252.0')
+	net = IPv4Network('192.168.15.10/25')
 	print(net)
-	print(net.GetNetworkInfo())
-
-#TODO: przerobić wszystko poniżej
-
-# # funkcja parsuje adres IPv4 w formacie address/prefix i zwraca w postaci słownika
-# def ParseIPv4Address(IPv4AddressAndPrefix: str) -> dict:
-# 	#rozdzielenie części adresu i prefixa maski podsieci
-# 	partsList = IPv4AddressAndPrefix.replace(" ","").split("/")
-	
-# 	paramsDict = {'Address': IPv4AddressToList(partsList[0])}	
-# 	if len(partsList) >= 2:
-# 		paramsDict['PrefixLength'] = int(partsList[1])
-		
-# 		paramsDict['Netmask'] = ToList(GetIPv4AddressDotDec(GetIPv4NetmaskFromPrefixLength(int(partsList[1]))))
-		
-# 	return 	paramsDict
+	print(net.Divide(3))
 
 
 
-# # Podział sieci na podsieci
-# def IPv4Subnetting(IPv4Network, IPv4Netmask, numberOfSubnets: int) -> list:
-		
-# 	ValidateIPv4Address(IPv4Network)
-# 	ipv4NetworkDec = IPv4AddressToDec(IPv4Network)
 
-# 	ValidateIPv4Netmask(IPv4Netmask)
-# 	ipv4NetmaskDec = IPv4AddressToDec(IPv4Netmask)
 
-# 	#obliczanie adresu sieci, na wypadek, gdyby użytkownik podał adres hosta
-# 	ipv4NetworkDec = ipv4NetworkDec & ipv4NetmaskDec
-	
-# 	targetNetmask = ipv4NetmaskDec
 
-# 	#obliczanie maski docelowej
-# 	offset = 0
-# 	while (2 ** offset) < numberOfSubnets:
-# 		targetNetmask >>=1
-# 		targetNetmask += (1 << 31)
-# 		offset += 1
 
-# 	#obliczanie adresów sieciowych
-	
-# 	subnets = []
-# 	#obliczenie liczby bitów w części hosta
-# 	hostsBitsNumber = 32 - GetIPv4NetmaskPrefixLength(targetNetmask)
-# 	for i in range(numberOfSubnets):
-# 		#dodanie informacji o podsieci do listy
-# 		subnets.append(NetworkInfo(ipv4NetworkDec, targetNetmask))
-# 		#obliczenie adresu następnej podsieci 
-# 		ipv4NetworkDec += (1 << hostsBitsNumber)
-	
-# 	return subnets
 
 
 # # funkcja sortuje podany na wejście słownik wg liczby hostów
