@@ -162,11 +162,18 @@ def GetIPv4NetmaskPrefixLength(IPv4Netmask: str|list|int) -> int:
 		
 		bit=0
 		prefixLength = 32		
-		while bit == 0 and prefixLength > 0:
-			bit = netmaskDec & 1
-			if bit == 0:
-				prefixLength -= 1
+		
+		while not netmaskDec & 1 and prefixLength > 0:
+			prefixLength -= 1
 			netmaskDec >>= 1
+		
+		'''while bit == 0 and prefixLength > 0:
+			bit = netmaskDec & 1
+			prefixLength -= not bit
+			
+			#if bit == 0:
+			#	prefixLength -= 1
+			netmaskDec >>= 1'''
 		return prefixLength
 	
 def GetIPv4NetmaskFromPrefixLength(prefixLength: int) -> int:
@@ -355,4 +362,4 @@ if __name__ == '__main__':
 		},
 	}
 
-	NestedSubnetting('192.168.1.0', '255.255.255.0')
+	NestedSubnetting('192.168.1.0', '0.0.0.0')
