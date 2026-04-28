@@ -158,11 +158,8 @@ def ValidateIPv4Netmask(IPv4Netmask):
 # Obliczanie długości prefixu (liczba binarnych 1 w masce)
 def GetIPv4NetmaskPrefixLength(IPv4Netmask: str|list|int) -> int:
 	if ValidateIPv4Netmask(IPv4Netmask):
-		netmaskDec = IPv4AddressToDec(IPv4Netmask)
-		
-		
-		prefixLength = 0		
-		
+		netmaskDec = IPv4AddressToDec(IPv4Netmask)		
+		prefixLength = 0				
 		while netmaskDec & (1 << 31):
 			prefixLength += 1
 			netmaskDec <<= 1		
