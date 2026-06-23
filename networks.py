@@ -1,4 +1,14 @@
-import convertions as conv
+import conversions as conv
+import functions as func
+import msvcrt
+import json
+import menu
+
+# -----------------------------------------------------------------------------
+#           Zmienne globalne
+# -----------------------------------------------------------------------------
+
+subnetsResult = None
 
 #klasy reprezentujące błedne wartości w adresie IPv4
 class InvalidOctetsNumber(Exception):
@@ -8,7 +18,10 @@ class InvalidOctetValue(Exception):
 class NetmaskDiscontinuous(Exception):
 	pass
 
-	
+# -----------------------------------------------------------------------------
+#           Funkcje obsługi sieci
+# -----------------------------------------------------------------------------
+
 def ToList(IPv4AddressDotDec):
     list = IPv4AddressDotDec.split(".")
     list2 = []
@@ -30,15 +43,15 @@ def ToDotDec(list):
 			str2+="."
 	return str2
 	
-def IPv4AddressToBin(IPv4AddressDotDec):
-    if ValidateIPv4Address(IPv4AddressDotDec):
-        s = ""
-        l = ToList(IPv4AddressDotDec)
-        for el in l:
-            s += conv.DecToAny(el, 2, 8)
-        return s
-    else:
-        return 32*"0"
+# def IPv4AddressToBin(IPv4AddressDotDec):
+#     if ValidateIPv4Address(IPv4AddressDotDec):
+#         s = ""
+#         l = ToList(IPv4AddressDotDec)
+#         for el in l:
+#             s += conv.DecToAny(el, 2, 8)
+#         return s
+#     else:
+#         return 32*"0"
 			
 
 def MACToBin(MACaddress):
@@ -49,8 +62,17 @@ def MACToBin(MACaddress):
 	return bin
 
 #funkcja walidująca podany na wejście adres IPv4
-def ValidateIPv4Address(IPv4AddressDotDec):
-	octets = ToList(IPv4AddressDotDec)
+def ValidateIPv4Address(IPv4Address: str|list|int) -> bool:
+	#jeżeli podano adres IPv4 w postaci kropkowo-dziesiętnej
+	octets = []
+	if type(IPv4Address) == str: 
+		octets = ToList(IPv4Address)
+	#jeżeli podano adres IPv4 w postaci listy oktetów
+	elif type(IPv4Address) == list:
+		octets = IPv4Address
+	elif type(IPv4Address) == int:
+		if IPv4Address <= conv.AnyToDec(32*"1",2): return True
+		else: raise ValueError("Nieprawidłowa wartość dziesiętna adresu IPv4")	
 	
 	try:
 		#sprawdzamy, czy liczba oktetów jest prawidłowa
@@ -67,22 +89,58 @@ def ValidateIPv4Address(IPv4AddressDotDec):
 	finally:
 		pass
 #zamienia na 32-bitową liczbę dziesiętną 
-def IPv4AddressToDec(IPv4AddressDotDec):
-	if ValidateIPv4Address(IPv4AddressDotDec):
-		listOfOctets = ToList(IPv4AddressDotDec)
-		result = 0
+def IPv4AddressToDec(IPv4Address: str|list|int) -> int: 
+	if ValidateIPv4Address(IPv4Address):
+		if type(IPv4Address) == str: 
+			listOfOctets = ToList(IPv4Address)
+		elif type(IPv4Address) == list:
+			listOfOctets = IPv4Address
+		elif type (IPv4Address) == int: 
+			return IPv4Address & conv.AnyToDec(32*"1",2)
+
+		IPv4AddressDec = 0
 		for i in range(len(listOfOctets)):
-			result <<= 8
-			result += listOfOctets[i]
-		return result
+			IPv4AddressDec <<= 8
+			IPv4AddressDec += listOfOctets[i]
+		return IPv4AddressDec
+
+#zamiana adresu IPv4 na liczbę binarną
+def IPv4AddressToBin(IPv4Address):
+	if ValidateIPv4Address(IPv4Address):
+		return conv.DecToAny(IPv4AddressToDec(IPv4Address), 2, 32)		
+	else:
+		return 32*"0"
+
+#funkcja przekształca adres IPv4 w postaci dziesiętnej na listę oktetów
+def IPv4AddressToList(ipv4Address):
+	#sprawdzamy, czy podany adres IPv4 już jest listą
+	if type(ipv4Address) == list:
+		if ValidateIPv4Address(ipv4Address):
+			return ipv4Address
+	
+	ipv4AddressDec = IPv4AddressToDec(ipv4Address)
+	
+	octets = []
+	for i in range(4):
+		#zapisywanie ostatnich 8 bitów do zmiennej octet i dodanie jej do listy
+		octet = ipv4AddressDec & 255
+		octets.insert(0, octet)
+		#przesuwanie liczby ipv4AddressDec o 8 bitów w prawo
+		ipv4AddressDec >>= 8
+	
+	return octets
+
+# funkcja przekształca adres IPv4 na format kropkowo-dziesiętny
+def GetIPv4AddressDotDec(IPv4Address):
+	return ToDotDec(IPv4AddressToList(IPv4Address))
 
 # Walidacja maski podsieci
-def ValidateIPv4Netmask(IPv4NetmaskDotDec):
-	if ValidateIPv4Address(IPv4NetmaskDotDec):
+def ValidateIPv4Netmask(IPv4Netmask):
+	if ValidateIPv4Address(IPv4Netmask):
 		#walidacja ciągłości maski podsieci. 
 		#Maska podsieci składa się z sekwencji binarnych jedynek i następujących po nich zer.
 		#jeśli w masce wystąpi sekwencja 01, maska jest nieciągła
-		netmaskBin = IPv4AddressToBin(IPv4NetmaskDotDec)
+		netmaskBin = IPv4AddressToBin(IPv4Netmask)
 		
 		try:
 			#znajdź sekwencję 01 w masce podsieci
@@ -97,55 +155,284 @@ def ValidateIPv4Netmask(IPv4NetmaskDotDec):
 			if ve.args[0] == "substring not found":
 				return True
 		#return True
-#funkcja przekształca adres IPv4 w postaci dziesiętnej na listę oktetów
-def IPv4AddressDecToList(ipv4AddressDec):
-	octets = []
-	for i in range(4):
-		#zapisywanie ostatnich 8 bitów do zmiennej octet i dodanie jej do listy
-		octet = ipv4AddressDec & 255
-		octets.insert(0,octet)
-		#przesuwanie liczby ipv4AddressDec o 8 bitów w prawo
-		ipv4AddressDec >>= 8
-	return octets
+
+# Obliczanie długości prefixu (liczba binarnych 1 w masce)
+def GetIPv4NetmaskPrefixLength(IPv4Netmask: str|list|int) -> int:
+	if ValidateIPv4Netmask(IPv4Netmask):
+		netmaskDec = IPv4AddressToDec(IPv4Netmask)
+		
+		bit=0
+		prefixLength = 32		
+		while bit == 0 and prefixLength > 0:
+			bit = netmaskDec & 1
+			if bit == 0:
+				prefixLength -= 1
+			netmaskDec >>= 1
+		return prefixLength
+	
+def GetIPv4NetmaskFromPrefixLength(prefixLength: int) -> int:
+	if prefixLength >0 and prefixLength <=32:
+		netmaskBin = prefixLength*"1" + (32 - prefixLength)*"0"
+		return conv.AnyToDec(netmaskBin, 2)
+	else:
+		raise ValueError("Nieprawidłowa długość prefixu maski podsieci")
+		
 
 # Funkcja zwraca informacje na temat adresacji IPv4 sieci, do której należy podany adres i maska podsieci
-def NetworkInfo(IPv4AddressDotDec, IPv4NetmaskDotDec):
+def NetworkInfo(IPv4Address: str|list|int, IPv4Netmask: str|list|int) -> dict:	
 	
-	ValidateIPv4Address(IPv4AddressDotDec)
-	ValidateIPv4Netmask(IPv4NetmaskDotDec)
-	addressDec = IPv4AddressToDec(IPv4AddressDotDec)
-	netmaskDec = IPv4AddressToDec(IPv4NetmaskDotDec)
+	addressDec = IPv4AddressToDec(IPv4Address)
+	netmaskDec = IPv4AddressToDec(IPv4Netmask)
 
 	# obliczanie adresu sieci jako iloczynu logicznego adresu IP i maski podsieci
 	networkAddressDec = addressDec & netmaskDec
 	
+	#obliczanie adresu rozgłoszeniowego
 	broadcastAddressDec = int(networkAddressDec | (~netmaskDec + (1 << 32)))
 	
+	#obliczanie adresów użytecznych
 	firstHostAddressDec = networkAddressDec + 1
 	lastHostAddressDec = broadcastAddressDec - 1
 	
 	# Obliczanie długości prefixu (liczba binarnych 1 w masce)
-	bit=0
-	prefixLength = 32
-	nm = netmaskDec
-	while bit == 0:
-		bit = nm & 1
-		if bit == 0:
-			prefixLength -= 1
-		nm >>= 1		
+	
+	prefixLength = GetIPv4NetmaskPrefixLength(IPv4Netmask)
+			
 		
 	# budowanie słownika
 	network = {}
-	network['networkAddress'] = IPv4AddressDecToList(networkAddressDec)
-	network['netmask'] = IPv4AddressDecToList(netmaskDec)
+	network['networkAddress'] = IPv4AddressToList(networkAddressDec)
+	network['netmask'] = IPv4AddressToList(netmaskDec)
 	network['prefixLength'] = prefixLength
-	network['firstAddress'] = IPv4AddressDecToList(firstHostAddressDec)
-	network['lastAddress'] = IPv4AddressDecToList(lastHostAddressDec)
-	network['broadcastAddress'] = IPv4AddressDecToList(broadcastAddressDec)
+	network['firstAddress'] = IPv4AddressToList(firstHostAddressDec)
+	network['lastAddress'] = IPv4AddressToList(lastHostAddressDec)
+	network['broadcastAddress'] = IPv4AddressToList(broadcastAddressDec)
 	network['hostsNumber'] = (broadcastAddressDec - networkAddressDec - 1)
 
 	return network
 
+#funkcja dzieli sieć na równe podsieci
+def Subnetting(IPv4Address: str|list|int, IPv4Netmask: str|list|int, names: list) -> dict:
+	
+	addressDec = IPv4AddressToDec(IPv4Address)
+	netmaskDec = IPv4AddressToDec(IPv4Netmask)
+	networksNumber = len(names)
+	
+	#upewniamy się, że podany adres jest adresem sieci
+	addressDec = addressDec & netmaskDec
+	
+	#obliczamy liczbę bitów, o którą należy przesunąć maskę w prawo
+	# 2^n >= N, gdzie n - liczba bitów o którą należy przesunąć maskę, N - liczba sieci do podziału
+	n = 0	
+	while 2 ** n < networksNumber:
+		n += 1
+	
+	#obliczanie nowej maski podsieci
+	subnetsNetmask = netmaskDec
+	
+	for i in range(n):
+		subnetsNetmask >>= 1
+		subnetsNetmask += (1 << 31)
+	#Obliczanie informacji dla poszczególnych podsieci
+	subnetsDict = {}
+	address = addressDec
+	for i in range(networksNumber):
+		subnetsDictTemp = NetworkInfo( address, subnetsNetmask)
+		subnetsDict[names[i]] = subnetsDictTemp
+		address = IPv4AddressToDec(subnetsDictTemp['broadcastAddress']) + 1
+		
+	return subnetsDict
+	
 
-# Obliczanie adresu rozgłoszeniowego
+def NestedSubnetting (IPv4Address: str|list|int, IPv4Netmask: str|list|int) -> dict:
+	#addressDotDec = GetIPv4AddressDotDec(IPv4AddressToDec(IPv4Address))
+	names = ["SUBNET1", "SUBNET2"]
+	result = {}
+	
+	
+	if GetIPv4NetmaskPrefixLength(IPv4Netmask) <= 29:
+		subnets = Subnetting(IPv4Address, IPv4Netmask, names)
+		print (subnets)
+		#for k, v in subnets.items():
+			
+			
+			#TODO: dokończyć
+		
+	
+	
+	
+	return result
+	
 
+# funkcja sortuje podany na wejście słownik wg liczby hostów
+def SubnetsSort(networks: dict, method: int, reverse = False) -> list:
+	templist = list(networks.items())
+#print(templist)
+#sortowanie bąbelkowe
+	if method == 0:  
+		for maxElement in range(len(templist)- 1, 1,-1):
+			for index in range(maxElement):
+			#kierunek sortowania
+				condition = False
+				if reverse == True:
+					condition = templist[index][1]['hostsNumber'] < templist[index + 1][1]['hostsNumber']
+				else:
+					condition = templist[index][1]['hostsNumber'] > templist[index + 1][1]['hostsNumber']
+				if condition == True:
+					temp = templist[index]
+					templist[index] = templist[index + 1]
+					templist[index + 1] = temp
+	 
+	return templist
+
+# -----------------------------------------------------------------------------
+#           Obsługa menu IPv4Networks
+# -----------------------------------------------------------------------------
+
+def IPv4NetworksMenu():
+	menuItems = ['Informacje o sieci na podstawie IP i maski',
+	'Podział sieci na równe podsieci', 'Podział sieci z dostosowaniem maski podsieci (VLSM)','Zapisz do CSV',
+	'Pobierz dane na temat sieci z pliku CSV', 'Pokaż dane sieci', 'Zapisz do JSON', 'Odczytaj z JSON']
+	result = menu.Menu("Działania na adresach IPv4", menuItems, True)
+
+	match result[0]:
+		case 0:
+			NetworkInfoMenuOption()
+			msvcrt.getch()
+		case 1:			
+			SubnettingMenuOption()
+			msvcrt.getch()
+		case 2:
+			print ("W budowie...")
+			msvcrt.getch()
+		case 3:
+			#print ("W budowie...")
+			SaveASCSVMenuOption()
+			msvcrt.getch()
+		case 4:
+			#print ("W budowie...")
+			LoadFromCSVMenuOption()
+			msvcrt.getch()
+		case 5:
+			
+			if type(subnetsResult) == dict:
+				for name, network in subnetsResult.items():
+					print(name + ':')
+					for k, v in network.items():
+						print('   ', k + ':\t', v)
+			else: print('Nie dokonano podziału.')
+			msvcrt.getch()
+
+		case 6:
+			#print ("W budowie...")
+			SaveAsJSONMenuOption()
+			msvcrt.getch()
+		case 7:
+			LoadFromJSONMenuOption()
+			msvcrt.getch()
+
+def NetworkInfoMenuOption():
+	IPv4Address = input('Podaj adres IPv4: ')
+	IPv4Netmask = input('Podaj maskę podsieci: ')
+	res = NetworkInfo(IPv4Address, IPv4Netmask)
+	print ("Oto szczególowe informacje na temat tej podsieci:")
+	print (res)
+
+def SubnettingMenuOption():
+	
+	IPv4Address = input('Podaj adres sieci IPv4: ')
+	IPv4Netmask = input('Podaj maskę podsieci: ')
+	networksNumber = int(input('Na ile sieci dzielimy? '))
+	names = []
+	for i in range(networksNumber):
+		name = input('Podaj nazwę sieci nr ' + str(i) + ': ')
+		names.append(name)
+	global subnetsResult
+	
+	subnetsResult = Subnetting(IPv4Address, IPv4Netmask, names)
+	print ("Sieci po podziale wyglądają następująco:")
+	print (subnetsResult)
+
+def SaveASCSVMenuOption():
+	if subnetsResult != None:
+		
+		filename = input("Podaj nazwę pliku:")
+		
+		with open(filename,'w') as csv_file:
+			for name, network in subnetsResult.items():
+				#
+				line = name + ',' + ToDotDec(network['networkAddress']) 
+				line += ',' + ToDotDec(network['netmask'])
+				line += ',' + ToDotDec(network['broadcastAddress'])		
+				line += ',' + ToDotDec(network['firstAddress'])
+				line += ',' + ToDotDec(network['lastAddress'])
+				line += ',' + str(network['prefixLength'])
+				line += ',' + str(network['hostsNumber'])	+ '\n'
+				csv_file.writelines(line)
+
+	else: print("Nie dokonano podziału")
+	
+def LoadFromCSVMenuOption():
+	filename = input("Podaj nazwę pliku:")
+	
+	global subnetsResult
+	try:
+		with open(filename,'r') as csv_file:
+			#każdy wiersz jako element listy
+			lines = csv_file.readlines()
+			
+			subnetsResult = {}
+			
+			for line in lines:			 
+				network = line.split(',')
+				#tworzymy słownik wewnetrzny
+				netDict = {}
+				networkName = network[0]
+				netDict['networkAddress'] = ToList(network[1])				
+				netDict['netmask'] = ToList(network[2])
+				netDict['broadcastAddress'] = ToList(network[3])
+				netDict['firstAddress'] = ToList(network[4])
+				netDict['lastAddress'] = ToList(network[5])
+				netDict['prefixLength'] = int(network[6])
+				netDict['hostsNumber'] = int(network[7])	
+			
+				subnetsResult[networkName] = netDict	
+		print(subnetsResult)
+	except FileNotFoundError:
+		print("Plik nie istnieje")
+
+def SaveAsJSONMenuOption():
+	if subnetsResult != None:
+		filename = input("Podaj nazwę pliku:")
+		with open(filename,'w') as json_file:
+			json.dump(subnetsResult, json_file)
+	else: print("Nie dokonano podziału")
+
+
+def LoadFromJSONMenuOption():
+	filename = input("Podaj nazwę pliku:")
+	
+	global subnetsResult
+
+	with open(filename,'r') as json_file:			
+		
+		subnetsResult = json.load(json_file)
+
+		print(subnetsResult)
+		print(type(subnetsResult))
+	
+ 
+if __name__ == '__main__':
+	networks = {
+		"LAN1": {  
+		"hostsNumber": 35
+		},
+		"LAN2": {
+		"hostsNumber": 12
+		},
+		"LAN3": {
+		"hostsNumber": 20
+		},
+	}
+
+	NestedSubnetting('192.168.1.0', '255.255.255.0')

@@ -1,28 +1,29 @@
 
-import convertions as conv
+import conversions as conv
 import networks as nets
 import functions as f
+import menu
+import msvcrt 
 
+mainMenu = ['Przeliczenia systemów liczbowych',
+		'Przeliczenia adresów IPv4',
+		'Przeliczenia adresów IPv6' ]
 
-address = input('Podaj adres IPv4: ')
-netmask = input ('Podaj maskę podsieci: ')
-try:    
-    nets.ValidateIPv4Address(address)
-    nets.ValidateIPv4Netmask(netmask)
-    
-   
-except nets.InvalidOctetsNumber as invOctNum:
-    #wydzielenie parametrów przekazanych wraz z wyjątkami
-    msg, num = invOctNum.args
-    print("Błąd! ", msg, ": ", num)
-    
-except nets.InvalidOctetValue as invOctVal:
-    #wydzielenie parametrów przekazanych wraz z wyjątkami
-    msg, nr, val = invOctVal.args
-    #TODO: poprawić komunikat
-    print("Błąd! ", msg +" nr "+ str(nr) + ":", val)
-except nets.NetmaskDiscontinuous as netmaskDiscontinuous:
-    print("Błąd!", netmaskDiscontinuous.args[0], netmaskDiscontinuous.args[1])
-#gdy nie zostanie zgłoszony wyjątek
-else:
-    print(nets.NetworkInfo(address,netmask))
+try:	
+	mainMenuResult = (-1,None)
+	while mainMenuResult[0] != 3:
+		mainMenuResult = menu.Menu("Menu główne", mainMenu)
+
+		match mainMenuResult[0]:
+			case 0:
+				conv.ConversionsMenu()
+			case 1:
+				nets.IPv4NetworksMenu()
+			case 2:
+				print('W budowie...')
+				msvcrt.getch()	
+	
+except nets.NetmaskDiscontinuous as nd:
+	print ('Błąd!', nd.args[0], nd.args[1])
+	
+
