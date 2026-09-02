@@ -2,6 +2,7 @@ import conversions as conv
 import functions as func
 import msvcrt
 import menu
+import json
 
 # -----------------------------------------------------------------------------
 #           Zmienne globalne
@@ -239,23 +240,25 @@ def Subnetting(IPv4Address: str|list|int, IPv4Netmask: str|list|int, names: list
 		
 	return subnetsDict
 	
-
-def NestedSubnetting (IPv4Address: str|list|int, IPv4Netmask: str|list|int) -> dict:
+#Demonstracja rekurencji, obliczanie zagnieżdżonych podsieci
+def NestedSubnetting (IPv4Address: str|list|int, IPv4Netmask: str|list|int, firstInvoking = True) -> dict:
 	#addressDotDec = GetIPv4AddressDotDec(IPv4AddressToDec(IPv4Address))
-	names = ["SUBNET1", "SUBNET2"]
-	result = {}
 	
+	if firstInvoking: 
+		result = NetworkInfo(IPv4Address, IPv4Netmask)
+	else: result = None	
 	
 	if GetIPv4NetmaskPrefixLength(IPv4Netmask) <= 29:
+		names = ["SUBNET1", "SUBNET2"]
 		subnets = Subnetting(IPv4Address, IPv4Netmask, names)
-		print (subnets)
-		#for k, v in subnets.items():
-			
-			
-			#TODO: dokończyć
-		
-	
-	
+		for k in subnets.keys():
+			#sprawdzamy, czy da się podzielić na podsieci, jeśli tak, dodaj klucz subnets do bieżącej sieci
+			trySubnet = NestedSubnetting(subnets[k]['networkAddress'],subnets[k]['netmask'], False)			
+			if isinstance(trySubnet, dict): subnets[k]['subnets'] = trySubnet
+
+		if firstInvoking: 			
+			result['subnets'] = subnets
+		else: result = subnets	
 	
 	return result
 	
@@ -354,4 +357,7 @@ if __name__ == '__main__':
 	print(GetIPv4NetmaskPrefixLength('0.0.0.0'))
 	print(GetIPv4NetmaskPrefixLength('255.255.255.255'))
 	print(GetIPv4NetmaskPrefixLength('255.255.240.0'))
-	NestedSubnetting('192.168.1.0', '255.255.255.248')
+	with open('networks.json', 'w') as file:
+		json.dump(NestedSubnetting('192.168.1.0', '255.255.255.252'),file)
+
+	
